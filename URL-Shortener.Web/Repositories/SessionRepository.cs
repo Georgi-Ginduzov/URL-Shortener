@@ -16,7 +16,7 @@ namespace URL_Shortener.Web.Repositories
 
         public async Task<Session> GetOrCreateAsync(Guid sessionId)
         {
-            var session = await db.Sessions.FindAsync([sessionId]);
+            var session = await db.Sessions.FindAsync(sessionId);
             if (session != null)
                 return session;
 
