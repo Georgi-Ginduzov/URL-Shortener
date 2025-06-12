@@ -5,6 +5,8 @@ using URL_Shortener.Web.Repositories.Interfaces;
 using URL_Shortener.Web.Repositories;
 using URL_Shortener.Web.Services;
 using URL_Shortener.Web.Services.Interfaces;
+using Microsoft.Extensions.Configuration;
+using URL_Shortener.Web.ExternalSystems.SafeBrowsing.Models;
 
 namespace URL_Shortener.Web
 {
@@ -19,12 +21,15 @@ namespace URL_Shortener.Web
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(connectionString));
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+            builder.Services.Configure<SafeBrowsingOptions>(builder.Configuration.GetSection("SafeBrowsing"));
 
             builder.Services.AddSession(opts =>
             {
                 opts.Cookie.Name = ".UrlShort.Session";
                 opts.IdleTimeout = TimeSpan.FromMinutes(30);
                 opts.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                opts.Cookie.HttpOnly = true;
+                opts.Cookie.SameSite = SameSiteMode.Lax;
             });
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -34,12 +39,15 @@ namespace URL_Shortener.Web
             
             builder.Services.AddHttpContextAccessor();
 
-            builder.Services.AddSingleton<IUrlSecurityService, UrlSecurityService>();
+            //builder.Services.AddSingleton<IUrlSecurityService, UrlSecurityService>();
 
+
+            builder.Services.AddHttpClient<IUrlSecurityService, UrlSecurityService>()
+                .SetHandlerLifetime(TimeSpan.FromMinutes(10));
             builder.Services.AddScoped<IShorteningService, ShorteningService>();
-
-            builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-                .AddEntityFrameworkStores<ApplicationDbContext>();
+            builder.Services.AddDefaultIdentity<IdentityUser>()
+                .AddEntityFrameworkStores<ApplicationDbContext>()
+                .AddDefaultTokenProviders();
             builder.Services.AddControllersWithViews();
 
             var app = builder.Build();

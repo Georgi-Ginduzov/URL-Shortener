@@ -11,41 +11,66 @@ namespace URL_Shortener.Web.Services
     public class ShorteningService : IShorteningService
     {
         private readonly IUnitOfWork unitOfWork;
+        private readonly IUrlSecurityService securityService;
 
-        public ShorteningService(IUnitOfWork unitOfWork)
+        public ShorteningService(IUnitOfWork unitOfWork, IUrlSecurityService securityService)
         {
             this.unitOfWork = unitOfWork;
+            this.securityService = securityService;
         }
 
         public async Task<CreateResult> ShortenUrl(string targetUrl, HttpContext httpContext)
         {
             var sessionId = httpContext.Session.GetOrCreateGuid();
             await unitOfWork.SessionRepository.GetOrCreateAsync(sessionId);
+            await unitOfWork.SessionRepository.TouchAsync(sessionId);
 
             // Security check
+            if (!securityService.IsValidUri(targetUrl))
+                return new CreateResult(null, null, "The provided uri for shortening is not a valid uri");
 
-            Url shortUrl;
-            if (!IsLoggedInUser(httpContext))
+            var uriSecurityCheck = securityService.IsUrlSafeAsync(targetUrl);
+            var shortUrl = NewShortenedUrl(targetUrl, httpContext);
+
+            try
             {
-                shortUrl = await unitOfWork.UrlRepository
-                    .AddNewUrlAsync(targetUrl, Guid.Parse(httpContext.Session.Id));
+                await Task.WhenAll(uriSecurityCheck, shortUrl);
+
+                if (!uriSecurityCheck.Result)
+                {
+                    unitOfWork.UrlRepository.Remove(shortUrl.Result);
+                    await unitOfWork.SaveAsync();
+
+                    return new CreateResult(null, null, "The provided url is harmful hence it won't be shortened!");
+                }
+
+                await unitOfWork.SaveAsync();
+
+                return new CreateResult(shortUrl.Result.ShortenedURL, shortUrl.Result.TargetURL);
             }
-            else
+            catch (Exception ex)
             {
-                var userId = httpContext.User.Identity.GetUserId();
-                shortUrl = await unitOfWork.UrlRepository
-                    .AddNewUrlAsync(targetUrl, userId, Guid.Parse(httpContext.Session.Id));
+                var errorMessage = $"An error occurred while shortening the url: {targetUrl}.\nException message:\n{ex.Message}StackTrace:\n{ex.StackTrace}";
+                if (!shortUrl.IsCompleted)
+                {
+                    unitOfWork.UrlRepository.Remove(shortUrl.Result);
+                    await unitOfWork.SaveAsync();
+                }
+
+                return new CreateResult(null, null, errorMessage);
+            }
+            finally
+            {
+                
             }
 
-            await unitOfWork.SaveAsync();
-
-            return new CreateResult(shortUrl.ShortenedURL, shortUrl.TargetURL);
         }
 
         public async Task<RedirectResult> GetRedirectionUrl(string shortUrl, HttpContext httpContext)
         {
             var sessionId = httpContext.Session.GetOrCreateGuid();
             await unitOfWork.SessionRepository.GetOrCreateAsync(sessionId);
+            await unitOfWork.SessionRepository.TouchAsync(sessionId);
 
             if (!Cryptography.IsValidBase62Slug(shortUrl))
                 return new RedirectResult(RedirectStatus.NotFound);
@@ -85,8 +110,6 @@ namespace URL_Shortener.Web.Services
                         catch (Exception ex) 
                         { Console.WriteLine(ex.Message + "Click logging failed"); }
                     });
-
-                    await unitOfWork.ClickDetailsRepository.AddAsync(url.Id);
                     break;
                 case AnalitycsType.SaveLocation:
                 case AnalitycsType.SaveClicksAndLocation:
@@ -110,5 +133,23 @@ namespace URL_Shortener.Web.Services
         }
 
         private bool IsLoggedInUser(HttpContext httpContext) => httpContext.User.Identity?.IsAuthenticated == true;
+
+        private async Task<Url> NewShortenedUrl(string targetUrl, HttpContext httpContext)
+        {
+            Url shortUrl;
+            if (!IsLoggedInUser(httpContext))
+            {
+                shortUrl = await unitOfWork.UrlRepository
+                    .AddNewUrlAsync(targetUrl, Guid.Parse(httpContext.Session.Id));
+            }
+            else
+            {
+                var userId = httpContext.User.Identity.GetUserId();
+                shortUrl = await unitOfWork.UrlRepository
+                    .AddNewUrlAsync(targetUrl, userId, Guid.Parse(httpContext.Session.Id));
+            }
+
+            return shortUrl;
+        }
     }
 }
