@@ -9,5 +9,7 @@ namespace URL_Shortener.Web.Repositories.Interfaces
         ValueTask<Url> AddNewUrlAsync(string targetUrl, string userId, Guid sessionId);
         Task<Url?> GetByIdAndUserIdAsync(long id, string userId);
         Task<Url?> GetByIdAsync(long id);
+        void Remove(Url url);
+        Task Remove(long id);
     }
 }

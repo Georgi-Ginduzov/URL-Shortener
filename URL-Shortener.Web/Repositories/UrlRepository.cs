@@ -1,7 +1,5 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using System.Data;
-using System.Text;
 using URL_Shortener.Web.Data;
 using URL_Shortener.Web.Data.Entities;
 using URL_Shortener.Web.Data.Entities.Enums;
@@ -12,27 +10,6 @@ namespace URL_Shortener.Web.Repositories
 {
     public class UrlRepository : IUrlRepository
     {
-        private const string urlCreationSql = """
-            DECLARE
-                @url     nvarchar(2048)      = {0},
-                @hash    nvarchar(64)        = {1},
-                @session uniqueidentifier    = {2},
-                @userId  nvarchar(450)       = {3},
-                @mode    int                 = {4};
-
-            MERGE dbo.URLs WITH (HOLDLOCK) AS tgt
-            USING (SELECT @hash AS HashedTargetURL) AS src
-            ON tgt.HashedTargetURL = src.HashedTargetURL
-            WHEN NOT MATCHED THEN
-              INSERT (SessionId, UserId, TargetURL, HashedTargetURL,
-                      CreatedAt,  ExpiresAt,    AnalitycsMode)
-              VALUES (@session, @userId, @url, @hash,
-                      SYSUTCDATETIME(),
-                      DATEADD(month, 1, SYSUTCDATETIME()),
-                      @mode)
-            --  ShortenedURL is **not** in the column list: SQL Server computes it
-            OUTPUT inserted.*;      -- gives us Id, ShortenedURL, everything
-            """;
         private readonly ApplicationDbContext db;
 
         public UrlRepository(ApplicationDbContext db)
@@ -99,6 +76,17 @@ namespace URL_Shortener.Web.Repositories
 
                 return existingUrl!;
             }
+        }
+
+        public async Task Remove(long id)
+        {
+            var entity = await db.URLs.FindAsync(id);
+            db.URLs.Remove(entity!);
+        }
+
+        public void Remove(Url url)
+        {
+            db.URLs.Remove(url);
         }
 
         private static bool IsDuplicate(DbUpdateException ex)
