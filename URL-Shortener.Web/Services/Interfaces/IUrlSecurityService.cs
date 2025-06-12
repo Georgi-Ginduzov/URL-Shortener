@@ -2,6 +2,7 @@
 {
     public interface IUrlSecurityService
     {
-        ValueTask<bool> IsUrlSecure(string url);
+        bool IsValidUri(string url);
+        Task<bool> IsUrlSafeAsync(string url);
     }
 }

@@ -1,29 +1,53 @@
-﻿using URL_Shortener.Web.Services.Interfaces;
+﻿using Microsoft.Extensions.Options;
+using URL_Shortener.Web.ExternalSystems.SafeBrowsing.Models;
+using URL_Shortener.Web.Services.Interfaces;
+using static System.Net.WebRequestMethods;
 
 namespace URL_Shortener.Web.Services
 {
     public class UrlSecurityService : IUrlSecurityService
     {
+        private readonly HttpClient http;
+        private readonly SafeBrowsingOptions opts;
 
-        public async ValueTask<bool> IsUrlSecure(string url)
+        public UrlSecurityService(HttpClient http, IOptions<SafeBrowsingOptions> opts)
         {
-            // Is url valid
-            try
+            this.http = http;
+            this.opts= opts.Value;
+        }
+
+        public bool IsValidUri(string url)
+        {
+            var isUriCreated = Uri.TryCreate(url, UriKind.Absolute, out var uri);
+
+            if (isUriCreated && url.ToLower().StartsWith("https"))
             {
-                var isValidUri = Uri.IsWellFormedUriString(url, UriKind.RelativeOrAbsolute);
-
-                if (!url.StartsWith("https"))
-                    return false;
-
-                //...
-            }
-            catch
-            {
-
-                return false;
+                return true;
             }
 
-            return true;
+            return false;
+        }
+
+        public async Task<bool> IsUrlSafeAsync(string url)
+        {
+            var reqest = new SafeBrowsingRequest
+            {
+                Client = new ClientInfo
+                {
+                    ClientId = opts.ClientId,
+                    ClientVersion = opts.ClientVersion
+                },
+                ThreatInfo = new ThreatInfo
+                {
+                    ThreatEntries = [new ThreatEntry { Url = url }]
+                }
+            };
+            var uri = $"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={opts.ApiKey}";
+            var response = await http.PostAsJsonAsync(uri, reqest);
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadFromJsonAsync<SafeBrowsingResponse>();
+            
+            return body?.Matches == null || body.Matches.Count == 0;
         }
     }
 }
