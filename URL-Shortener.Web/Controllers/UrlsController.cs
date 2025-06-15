@@ -49,33 +49,7 @@ namespace URL_Shortener.Web.Controllers
             return View(urlVM);
         }
         
-        public ActionResult Create()
-        {
-            return View(new ShortenUrlVm());
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(ShortenUrlVm vm)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                    return View(vm);
-
-                var result = await shorteningService.ShortenUrl(vm.TargetUrl, HttpContext);
-                if (result.ErrorMessage != null)
-                {
-                    ModelState.AddModelError(string.Empty, result.ErrorMessage);
-                    return View(vm);
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
-        }
+        public ActionResult Create() => RedirectToAction("Index", "Home");
 
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(long id)
