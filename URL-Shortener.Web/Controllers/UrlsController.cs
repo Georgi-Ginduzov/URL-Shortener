@@ -37,31 +37,19 @@ namespace URL_Shortener.Web.Controllers
         {
             var userId = User.Identity.GetUserId();
             var url = await unitOfWork.UrlRepository.GetByIdAndUserIdAsync(id, userId);
-            var uri = new Uri($"{Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}");
+            var clicks = await unitOfWork.ClickDetailsRepository.GetByUrlId(id);
+
+            var uri = new Uri($"{Request.Scheme}://{Request.Host}");
 
             if (url is null)
                 return NotFound();
 
-            var urlVM = new UrlReadOnlyVM(url, uri);
+            var urlVM = new UrlReadOnlyVM(url, clicks, uri);
 
             return View(urlVM);
         }
         
         public ActionResult Create() => RedirectToAction("Index", "Home");
-
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(long id)
-        {
-            var userId = User.Identity.GetUserId();
-            var url = await unitOfWork.UrlRepository.GetByIdAndUserIdAsync(id, userId);
-            if (url == null)
-                return NotFound();
-
-            var uri = new Uri($"{Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}");
-
-            var urlVM = new UrlReadOnlyVM(url, uri);
-            return View(urlVM);
-        }
 
         [HttpPut]
         [ValidateAntiForgeryToken]

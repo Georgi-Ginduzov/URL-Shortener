@@ -42,6 +42,12 @@ namespace URL_Shortener.Web.Models.UrlVMs
                 }
             }
         }
+        
+        public UrlReadOnlyVM(Url url, IEnumerable<ClickDetail> clicks, Uri uri) : this(url, uri)
+        {
+            foreach (var click in clicks)
+                ClickDetails.Add(new ClickDetailReadOnlyVM(click.Timestamp, click.IPAdress, click.UserAgent));
+        }
 
         public long Id { get; }
         public string ShortenedUrl { get; }

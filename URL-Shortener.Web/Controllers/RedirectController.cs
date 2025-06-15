@@ -13,7 +13,6 @@ namespace URL_Shortener.Web.Controllers
             _shortener = shortener;
         }
 
-        // When someone hits https://yourdomain.com/{shortCode}
         [HttpGet("/r/{shortCode}")]
         public async Task<IActionResult> To(string shortCode)
         {
