@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNet.Identity;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 using URL_Shortener.Web.Data.Entities;
 using URL_Shortener.Web.Data.Entities.Enums;
 using URL_Shortener.Web.Models.UrlVMs;
@@ -140,7 +138,7 @@ namespace URL_Shortener.Web.Controllers
                 return View(); // Probably add error
             }
         }
-
+        
         [HttpPost]
         [ActionName("Delete")]
         [ValidateAntiForgeryToken]

@@ -1,12 +1,11 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using URL_Shortener.Web.Data;
-using URL_Shortener.Web.Repositories.Interfaces;
+using URL_Shortener.Web.ExternalSystems.SafeBrowsing.Models;
 using URL_Shortener.Web.Repositories;
+using URL_Shortener.Web.Repositories.Interfaces;
 using URL_Shortener.Web.Services;
 using URL_Shortener.Web.Services.Interfaces;
-using Microsoft.Extensions.Configuration;
-using URL_Shortener.Web.ExternalSystems.SafeBrowsing.Models;
 
 namespace URL_Shortener.Web
 {
