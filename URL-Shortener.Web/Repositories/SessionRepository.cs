@@ -16,9 +16,19 @@ namespace URL_Shortener.Web.Repositories
 
         public async Task<Session> GetOrCreateAsync(Guid sessionId)
         {
-            var session = await db.Sessions.FindAsync(sessionId);
-            if (session != null)
+            var session = db.Sessions.Local.FirstOrDefault(s => s.Id == sessionId);
+            if (session is not null)
+            {
+                Touch(session);
                 return session;
+            }
+
+            session = await db.Sessions.FindAsync(sessionId);
+            if (session is not null)
+            {
+                Touch(session);
+                return session;
+            }
 
             var timestamp = DateTime.Now;
 
@@ -28,20 +38,31 @@ namespace URL_Shortener.Web.Repositories
                 CreatedAt = timestamp,
                 LastSeenAt = timestamp,
             };
-            db.Sessions.Add(session);
-            await db.SaveChangesAsync();
-            return session;
+            var createdSession = db.Sessions.Add(session);
+
+            return createdSession.Entity;
         }
 
+        /// <summary>
+        /// Updates LastSeenAt property to the current time directly in the database
+        /// </summary>
+        /// <param name="sessionId"></param>
+        /// <returns></returns>
         public async Task TouchAsync(Guid sessionId)
         {
-            // A plain UPDATE avoids loading the entity
             await db.Database.ExecuteSqlInterpolatedAsync($"""
             UPDATE Sessions
             SET LastSeenAt = {DateTime.Now}
             WHERE Id = {sessionId}
             """);
         }
+
+        /// <summary>
+        /// Changes the property of last seen at to the current time
+        /// </summary>
+        /// <param name="session"></param>
+        public void Touch(Session session) => session.LastSeenAt = DateTime.Now;
+
         public void Dispose()
         {
             db?.Dispose();

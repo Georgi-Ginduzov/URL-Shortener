@@ -28,10 +28,12 @@
                             <a asp-controller="Home" asp-action="Index"
                                class="nav-link">Home</a>
                         </li>
-                        <li class="nav-item">
-                            <a asp-controller="Home" asp-action="Privacy"
-                               class="nav-link">Privacy</a>
-                        </li>
+                        @*  @if (SignInManager.IsSignedIn(User))   <!-- or: if (User.Identity.IsAuthenticated) -->
+                        {
+                            <li class="nav-item">
+                                <a asp-controller="Secret" asp-action="Index" class="nav-link">Secret</a>
+                            </li>
+                        } *@
                     </ul>
 
                     <!-- login / register partial still works -->

@@ -23,7 +23,6 @@ namespace URL_Shortener.Web.Repositories
             };
 
             var clickDetail = await db.ClickDetails.AddAsync(clickDetailObject);
-            await db.SaveChangesAsync();
 
             return clickDetail.Entity;
         }
@@ -38,7 +37,6 @@ namespace URL_Shortener.Web.Repositories
             };
 
             var clickDetail = await db.ClickDetails.AddAsync(clickDetailObject);
-            await db.SaveChangesAsync();
 
             return clickDetail.Entity;
         }
@@ -54,7 +52,6 @@ namespace URL_Shortener.Web.Repositories
             };
 
             var clickDetail = await db.ClickDetails.AddAsync(clickDetailObject);
-            await db.SaveChangesAsync();
 
             return clickDetail.Entity;
         }

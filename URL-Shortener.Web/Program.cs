@@ -39,9 +39,6 @@ namespace URL_Shortener.Web
             
             builder.Services.AddHttpContextAccessor();
 
-            //builder.Services.AddSingleton<IUrlSecurityService, UrlSecurityService>();
-
-
             builder.Services.AddHttpClient<IUrlSecurityService, UrlSecurityService>()
                 .SetHandlerLifetime(TimeSpan.FromMinutes(10));
             builder.Services.AddScoped<IShorteningService, ShorteningService>();
@@ -70,6 +67,7 @@ namespace URL_Shortener.Web
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             // app.MapControllerRoute(

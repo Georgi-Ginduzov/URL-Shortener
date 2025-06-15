@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+﻿using Microsoft.EntityFrameworkCore;
 using URL_Shortener.Web.Data;
 using URL_Shortener.Web.Repositories.Interfaces;
 
@@ -23,7 +23,20 @@ namespace URL_Shortener.Web.Repositories
 
         public async Task SaveAsync()
         {
-            await db.SaveChangesAsync();
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                // Log + Detach
+                Console.WriteLine(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                // Log data
+                Console.WriteLine(ex.Message);
+            }
         }
 
         public void Dispose()
