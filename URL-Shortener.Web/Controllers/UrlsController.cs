@@ -167,21 +167,6 @@ namespace URL_Shortener.Web.Controllers
             }
         }
 
-        [HttpGet]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(long id)
-        {
-            var userId = User.Identity.GetUserId();
-            var url = await unitOfWork.UrlRepository.GetByIdAndUserIdAsync(id, userId);
-            if (url == null)
-                return NotFound();
-
-            var uri = new Uri($"{Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}");
-
-            var urlVM = new UrlReadOnlyVM(url, uri);
-            return View(urlVM);
-        }
-
         [HttpPost]
         [ActionName("Delete")]
         [ValidateAntiForgeryToken]
@@ -189,7 +174,6 @@ namespace URL_Shortener.Web.Controllers
         {
             try
             {
-                var userId = User.Identity.GetUserId();
                 await unitOfWork.UrlRepository.RemoveAsync(id);
                 await unitOfWork.SaveAsync();
 
