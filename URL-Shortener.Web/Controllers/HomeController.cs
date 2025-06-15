@@ -43,8 +43,16 @@ namespace URL_Shortener.Web.Controllers
                 
                 var uri = new Uri($"{Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}");
                 
-                vm.ShortUrl = uri.ToString() + "r/" + urlEntity.ShortUrl;
-                vm.TargetUrl = urlEntity.TargetUrl;
+                if(string.IsNullOrEmpty(urlEntity.TargetUrl) && !string.IsNullOrEmpty(urlEntity.ErrorMessage))
+                {
+                    vm.Error = urlEntity.ErrorMessage;
+                }
+                else
+                {
+                    vm.ShortUrl = uri.ToString() + "r/" + urlEntity.ShortUrl;
+                    vm.TargetUrl = urlEntity.TargetUrl!;
+
+                }
             }
             catch (Exception ex)
             {
