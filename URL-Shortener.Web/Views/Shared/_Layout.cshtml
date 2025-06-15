@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - URL_Shortener.Web</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/URL_Shortener.Web.styles.css" asp-append-version="true" />
 </head>
@@ -28,12 +29,6 @@
                             <a asp-controller="Home" asp-action="Index"
                                class="nav-link">Home</a>
                         </li>
-                        @*  @if (SignInManager.IsSignedIn(User))   <!-- or: if (User.Identity.IsAuthenticated) -->
-                        {
-                            <li class="nav-item">
-                                <a asp-controller="Secret" asp-action="Index" class="nav-link">Secret</a>
-                            </li>
-                        } *@
                     </ul>
 
                     <!-- login / register partial still works -->

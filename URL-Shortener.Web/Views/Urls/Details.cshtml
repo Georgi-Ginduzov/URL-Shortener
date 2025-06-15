@@ -1,50 +1,182 @@
-﻿@model UrlReadOnlyVM
+﻿@using System.Text.Json
+@using URL_Shortener.Web.Data.Entities.Enums
+@model UrlReadOnlyVM
 @{
     ViewData["Title"] = "Details";
 }
-<h2>Details</h2>
-<div>
-    <dl class="row">
-        <dt class="col-sm-2">Short</dt>
-        <dd class="col-sm-10">@Model.ShortenedUrl</dd>
-        <dt class="col-sm-2">Target</dt>
-        <dd class="col-sm-10">@Model.TargetUrl</dd>
-        <dt class="col-sm-2">Created</dt>
-        <dd class="col-sm-10">@Model.ShortenedAt</dd>
-        <dt class="col-sm-2">Expires</dt>
-        <dd class="col-sm-10">@Model.ExpiresAt</dd>
-    </dl>
+
+<h2 class="mb-3">URL Details</h2>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-primary text-white">Manage</div>
+            <div class="card-body">
+                <form asp-action="Edit" method="post" id="editForm" class="vstack gap-3">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="Id" />
+                    <div class="input-group input-group-sm">
+                        <input class="form-control" value="@Model.ShortenedUrl" readonly />
+                        <button type="button" class="btn btn-outline-secondary copy-btn" data-url="@Model.ShortenedUrl">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                    <div class="form-floating">
+                        <input asp-for="TargetUrl" class="form-control" placeholder="Target URL" />
+                        <label asp-for="TargetUrl"></label>
+                        <span asp-validation-for="TargetUrl" class="text-danger"></span>
+                    </div>
+                    <div class="form-floating">
+                        <input class="form-control" value="@Model.ShortenedAt.ToString("g")" readonly />
+                        <label>Created</label>
+                    </div>
+                    <div class="form-floating">
+                        <input asp-for="ExpiresAt" class="form-control" type="datetime-local" placeholder="Expiration" />
+                        <label asp-for="ExpiresAt"></label>
+                        <span asp-validation-for="ExpiresAt" class="text-danger"></span>
+                    </div>
+                    <div class="form-floating">
+                        <select asp-for="Analitycs" class="form-select" asp-items="Html.GetEnumSelectList<AnalitycsType>()"></select>
+                        <label asp-for="Analitycs"></label>
+                    </div>
+                    <div class="d-flex">
+                        <button type="button" id="saveBtn" class="btn btn-success me-2 d-none">Save</button>
+                        <a asp-action="Index" class="btn btn-secondary">Back</a>
+                        <button type="button" class="btn btn-danger ms-auto" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-secondary text-white">Analytics</div>
+            <div class="card-body">
+                <canvas id="usageChart" height="200"></canvas>
+                <canvas id="locationChart" height="200" class="mt-4 d-none"></canvas>
+            </div>
+        </div>
+    </div>
 </div>
-<p>
-    <a asp-action="Edit" asp-route-id="@Model.Id">Edit</a> |
-    <a asp-action="Index">Back</a>
-</p>
-<form asp-action="Edit" method="post" class="mb-3">
-    @Html.AntiForgeryToken()
-    <input type="hidden" asp-for="Id" />
-    <div class="mb-3">
-        <label asp-for="TargetUrl" class="form-label"></label>
-        <input asp-for="TargetUrl" class="form-control" />
-        <span asp-validation-for="TargetUrl" class="text-danger"></span>
+
+<!-- Delete confirmation modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Delete URL</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this URL?
+            </div>
+            <div class="modal-footer">
+                <form asp-action="Delete" method="post" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="Id" />
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
     </div>
-    <div class="mb-3">
-        <label asp-for="ExpiresAt" class="form-label"></label>
-        <input asp-for="ExpiresAt" class="form-control" type="datetime-local" />
-        <span asp-validation-for="ExpiresAt" class="text-danger"></span>
-    </div>
-    <div class="mb-3">
-        <label asp-for="Analitycs" class="form-label"></label>
-        <select asp-for="Analitycs" class="form-select" asp-items="Html.GetEnumSelectList<URL_Shortener.Web.Data.Entities.Enums.AnalitycsType>()"></select>
-    </div>
-    <button type="submit" class="btn btn-primary">Save</button>
-    <a asp-action="Index" class="btn btn-secondary ms-2">Back</a>
-</form>
-<form asp-action="Delete" method="post" class="mt-3">
-    @Html.AntiForgeryToken()
-    <input type="hidden" asp-for="Id" />
-    <button type="submit" class="btn btn-danger">Delete</button>
-</form>
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        (() => {
+            const form = document.getElementById('editForm');
+            const saveBtn = document.getElementById('saveBtn');
+            const target = form.querySelector('[name="TargetUrl"]');
+            const expires = form.querySelector('[name="ExpiresAt"]');
+            const analytics = form.querySelector('[name="Analitycs"]');
+            const token = form.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            const initial = {
+                target: target.value,
+                expires: expires.value,
+                analytics: analytics.value
+            };
+
+            function toggleSave() {
+                const changed = target.value !== initial.target ||
+                                expires.value !== initial.expires ||
+                                analytics.value !== initial.analytics;
+                saveBtn.classList.toggle('d-none', !changed);
+            }
+
+            target.addEventListener('input', toggleSave);
+            expires.addEventListener('input', toggleSave);
+            analytics.addEventListener('change', toggleSave);
+
+            saveBtn.addEventListener('click', async () => {
+                const changed = [];
+                if (target.value !== initial.target) changed.push('targetUrl');
+                if (expires.value !== initial.expires) changed.push('expirationDate');
+                if (analytics.value !== initial.analytics) changed.push('analytics');
+                if (changed.length === 0) return;
+
+                const body = new URLSearchParams();
+                body.append('id', form.querySelector('[name="Id"]').value);
+                body.append('__RequestVerificationToken', token);
+
+                let method = 'PUT';
+                if (changed.length === 1) {
+                    method = 'PATCH';
+                    const key = changed[0];
+                    const val = key === 'targetUrl' ? target.value
+                              : key === 'expirationDate' ? expires.value
+                              : analytics.value;
+                    body.append(key, val);
+                } else {
+                    body.append('TargetUrl', target.value);
+                    body.append('ExpiresAt', expires.value);
+                    body.append('Analitycs', analytics.value);
+                }
+
+                await fetch(form.action, { method, body });
+                location.reload();
+            });
+
+            document.querySelector('.copy-btn')?.addEventListener('click', e => {
+                const btn = e.currentTarget;
+                navigator.clipboard.writeText(btn.dataset.url);
+                btn.innerHTML = '<i class="bi bi-check2"></i>';
+                setTimeout(() => btn.innerHTML = '<i class="bi bi-clipboard"></i>', 1500);
+            });
+
+            const clicks = JSON.parse('@Html.Raw(JsonSerializer.Serialize(Model.ClickDetails))');
+            const analType = @((int)Model.Analitycs);
+
+            const usageCounts = {};
+            clicks.forEach(c => {
+                const day = c.DateTime.split('T')[0];
+                usageCounts[day] = (usageCounts[day] || 0) + 1;
+            });
+            const usageLabels = Object.keys(usageCounts);
+            const usageData = Object.values(usageCounts);
+            new Chart(document.getElementById('usageChart'), {
+                type: 'line',
+                data: { labels: usageLabels, datasets: [{ label: 'Clicks', data: usageData, fill: false, borderColor: 'rgb(75, 192, 192)', tension: 0.1 }] },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+
+            if (analType === 3 || analType === 4) {
+                const ipCounts = {};
+                clicks.forEach(c => {
+                    const ip = c.IpAddress || 'Unknown';
+                    ipCounts[ip] = (ipCounts[ip] || 0) + 1;
+                });
+                const locLabels = Object.keys(ipCounts);
+                const locData = Object.values(ipCounts);
+                document.getElementById('locationChart').classList.remove('d-none');
+                new Chart(document.getElementById('locationChart'), {
+                    type: 'doughnut',
+                    data: { labels: locLabels, datasets: [{ data: locData }] },
+                });
+            }
+        })();
+    </script>
 }
