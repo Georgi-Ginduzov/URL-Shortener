@@ -29,6 +29,7 @@ namespace URL_Shortener.Web.Repositories
         public void Dispose()
         {
             db?.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }

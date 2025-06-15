@@ -42,5 +42,10 @@ namespace URL_Shortener.Web.Repositories
             WHERE Id = {sessionId}
             """);
         }
+        public void Dispose()
+        {
+            db?.Dispose();
+            GC.SuppressFinalize(this);
+        }
     }
 }

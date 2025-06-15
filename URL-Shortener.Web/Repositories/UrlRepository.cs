@@ -92,5 +92,11 @@ namespace URL_Shortener.Web.Repositories
         private static bool IsDuplicate(DbUpdateException ex)
             => ex.InnerException is SqlException sql 
                     && (sql.Number is 2601 or 2627);
+
+        public void Dispose()
+        {
+            db?.Dispose();
+            GC.SuppressFinalize(this);
+        }
     }
 }

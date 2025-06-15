@@ -2,7 +2,7 @@
 
 namespace URL_Shortener.Web.Repositories.Interfaces
 {
-    public interface IUrlRepository
+    public interface IUrlRepository : IRepository
     {
         ValueTask<Url> AddNewUrlAsync(string targetUrl, Guid sessionId);
         ValueTask<Url> AddNewUrlAsync(string targetUrl, string userId);

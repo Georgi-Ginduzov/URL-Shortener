@@ -2,7 +2,7 @@
 
 namespace URL_Shortener.Web.Repositories.Interfaces
 {
-    public interface IClickDetailsRepository
+    public interface IClickDetailsRepository : IRepository
     {
         Task<ClickDetail> AddAsync(long urlId);
         Task<ClickDetail> AddAsync(long urlId, string ipAddress);

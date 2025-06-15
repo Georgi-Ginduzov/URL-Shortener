@@ -59,7 +59,10 @@ namespace URL_Shortener.Web.Repositories
             return clickDetail.Entity;
         }
 
-
-
+        public void Dispose()
+        {
+            db?.Dispose();
+            GC.SuppressFinalize(this);
+        }
     }
 }
