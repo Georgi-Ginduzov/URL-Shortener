@@ -146,6 +146,7 @@ namespace URL_Shortener.Web.Services
                     .AddNewUrlAsync(targetUrl, userId, Guid.Parse(httpContext.Session.Id));
             }
 
+            await worker.SaveAsync();
             return shortUrl;
         }
     }

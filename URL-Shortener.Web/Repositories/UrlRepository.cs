@@ -93,6 +93,14 @@ namespace URL_Shortener.Web.Repositories
             if (local is not null) 
                 return local;
 
+            var hash = Cryptography.HashSha256(url);
+            var existingUrl = await db.URLs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.HashedTargetURL == hash
+                                            && (u.SessionId == sessionId || u.UserId == userId));
+            if (existingUrl is not null)
+                return existingUrl!;
+
             var entity = new Url
             {
                 SessionId = sessionId,
@@ -104,24 +112,7 @@ namespace URL_Shortener.Web.Repositories
             };
             db.URLs.Add(entity);
 
-            try
-            {
-                await db.SaveChangesAsync();
-                return entity;                  
-            }
-            catch (DbUpdateException ex) when (IsDuplicate(ex))
-            {
-                db.Entry(entity).State = EntityState.Detached;
-                
-                var hash = Cryptography.HashSha256(url);
-
-                var existingUrl = await db.URLs
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(u => u.HashedTargetURL == hash
-                                                && u.SessionId == sessionId && u.UserId == userId);
-
-                return existingUrl!;
-            }
+            return entity;                  
         }
 
         public async Task RemoveAsync(long id)
@@ -137,10 +128,6 @@ namespace URL_Shortener.Web.Repositories
         {
             db.URLs.Remove(url);
         }
-
-        private static bool IsDuplicate(DbUpdateException ex)
-            => ex.InnerException is SqlException sql 
-                    && (sql.Number is 2601 or 2627);
 
         public void Dispose()
         {
