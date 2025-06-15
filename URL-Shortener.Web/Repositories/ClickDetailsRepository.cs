@@ -1,4 +1,6 @@
-﻿using URL_Shortener.Web.Data;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Collections.Immutable;
+using URL_Shortener.Web.Data;
 using URL_Shortener.Web.Data.Entities;
 using URL_Shortener.Web.Repositories.Interfaces;
 
@@ -13,6 +15,11 @@ namespace URL_Shortener.Web.Repositories
             this.db = db;
         }
 
+        public async Task<IList<ClickDetail>> GetByUrlId(long id) 
+            => await db.ClickDetails
+                .AsNoTracking()
+                .Where(x => x.UrlId == id)
+                .ToListAsync();
 
         public async Task<ClickDetail> AddAsync(long urlId)
         {
