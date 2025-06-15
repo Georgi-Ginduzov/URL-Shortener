@@ -10,22 +10,20 @@ namespace URL_Shortener.Web.Services
 {
     public class ShorteningService : IShorteningService
     {
-        private readonly IUnitOfWork unitOfWork;
+        private readonly IUnitOfWork worker;
         private readonly IUrlSecurityService securityService;
 
         public ShorteningService(IUnitOfWork unitOfWork, IUrlSecurityService securityService)
         {
-            this.unitOfWork = unitOfWork;
+            this.worker = unitOfWork;
             this.securityService = securityService;
         }
 
         public async Task<CreateResult> ShortenUrl(string targetUrl, HttpContext httpContext)
         {
             var sessionId = httpContext.Session.GetOrCreateGuid();
-            await unitOfWork.SessionRepository.GetOrCreateAsync(sessionId);
-            await unitOfWork.SessionRepository.TouchAsync(sessionId);
+            await worker.SessionRepository.GetOrCreateAsync(sessionId);
 
-            // Security check
             if (!securityService.IsValidUri(targetUrl))
                 return new CreateResult(null, null, "The provided uri for shortening is not a valid uri");
 
@@ -38,39 +36,36 @@ namespace URL_Shortener.Web.Services
 
                 if (!uriSecurityCheck.Result)
                 {
-                    unitOfWork.UrlRepository.Remove(shortUrl.Result);
-                    await unitOfWork.SaveAsync();
+                    worker.UrlRepository.Remove(shortUrl.Result);
+                    await worker.SaveAsync();
 
                     return new CreateResult(null, null, "The provided url is harmful hence it won't be shortened!");
                 }
 
-                await unitOfWork.SaveAsync();
+                await worker.SaveAsync();
 
                 return new CreateResult(shortUrl.Result.ShortenedURL, shortUrl.Result.TargetURL);
             }
             catch (Exception ex)
             {
-                var errorMessage = $"An error occurred while shortening the url: {targetUrl}.\nException message:\n{ex.Message}StackTrace:\n{ex.StackTrace}";
+                var errorMessage = $"An error occurred while shortening the url: {targetUrl}.";
+                Console.WriteLine(errorMessage + $"\\nException message:\\n{ex.Message}StackTrace:\\n{ex.StackTrace}");
+
                 if (!shortUrl.IsCompleted)
                 {
-                    unitOfWork.UrlRepository.Remove(shortUrl.Result);
-                    await unitOfWork.SaveAsync();
+                    worker.UrlRepository.Remove(shortUrl.Result);
+                    await worker.SaveAsync();
                 }
 
                 return new CreateResult(null, null, errorMessage);
             }
-            finally
-            {
-                
-            }
-
         }
 
         public async Task<RedirectResult> GetRedirectionUrl(string shortUrl, HttpContext httpContext)
         {
             var sessionId = httpContext.Session.GetOrCreateGuid();
-            await unitOfWork.SessionRepository.GetOrCreateAsync(sessionId);
-            await unitOfWork.SessionRepository.TouchAsync(sessionId);
+            await worker.SessionRepository.GetOrCreateAsync(sessionId);
+            await worker.SessionRepository.TouchAsync(sessionId);
 
             if (!Cryptography.IsValidBase62Slug(shortUrl))
                 return new RedirectResult(RedirectStatus.NotFound);
@@ -79,7 +74,7 @@ namespace URL_Shortener.Web.Services
 
             if (!IsLoggedInUser(httpContext))
             {
-                var urlRecord = await unitOfWork.UrlRepository.GetByIdAsync(convertedUrl);
+                var urlRecord = await worker.UrlRepository.GetByIdAsync(convertedUrl);
                 if (urlRecord != null)
                     return new RedirectResult(RedirectStatus.Found, urlRecord.TargetURL);
                 else
@@ -88,7 +83,7 @@ namespace URL_Shortener.Web.Services
 
             // Based on the analytics do the associated thing
             var userId = httpContext.User.Identity.GetUserId();
-            var url = await unitOfWork.UrlRepository.GetByIdAndUserIdAsync(convertedUrl, userId);
+            var url = await worker.UrlRepository.GetByIdAndUserIdAsync(convertedUrl, userId);
 
             if (url == null)
                 return new RedirectResult(RedirectStatus.NotFound);
@@ -105,7 +100,7 @@ namespace URL_Shortener.Web.Services
                     {
                         try 
                         { 
-                            await unitOfWork.ClickDetailsRepository.AddAsync(url.Id); 
+                            await worker.ClickDetailsRepository.AddAsync(url.Id); 
                         }
                         catch (Exception ex) 
                         { Console.WriteLine(ex.Message + "Click logging failed"); }
@@ -119,10 +114,12 @@ namespace URL_Shortener.Web.Services
                     {
                         try
                         {
-                            await unitOfWork.ClickDetailsRepository.AddAsync(url.Id, ipAddress);
+                            await worker.ClickDetailsRepository.AddAsync(url.Id, ipAddress);
                         }
                         catch (Exception ex)
-                        { Console.WriteLine(ex.Message + "Click logging failed"); }
+                        { 
+                            Console.WriteLine(ex.Message + "Click logging failed"); 
+                        }
                     });
                     break;
                 default:
@@ -139,13 +136,13 @@ namespace URL_Shortener.Web.Services
             Url shortUrl;
             if (!IsLoggedInUser(httpContext))
             {
-                shortUrl = await unitOfWork.UrlRepository
+                shortUrl = await worker.UrlRepository
                     .AddNewUrlAsync(targetUrl, Guid.Parse(httpContext.Session.Id));
             }
             else
             {
                 var userId = httpContext.User.Identity.GetUserId();
-                shortUrl = await unitOfWork.UrlRepository
+                shortUrl = await worker.UrlRepository
                     .AddNewUrlAsync(targetUrl, userId, Guid.Parse(httpContext.Session.Id));
             }
 
